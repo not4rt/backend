@@ -9,9 +9,9 @@
 
 ## not4rt
 Submissão feita com:
-- `pingora` como load balancer
+- `pingora` como load balancer, lib lançada pela cloudflare algumas semanas atrás
 - `postgres` como banco de dados
-- `rust` para api com `actix-web` e `tokyo`
+- `rust` com `actix-web` e `tokyo`
 - [repositório da api](https://github.com/not4rt/backend)
 - [repositório do load-balancer utilizando pingora](https://github.com/not4rt/pingora-lb)
 - [repositório oficial do pingora](https://github.com/cloudflare/pingora)
