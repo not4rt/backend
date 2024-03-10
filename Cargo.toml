@@ -1,0 +1,19 @@
+[package]
+name = "backend"
+version = "1.0.0"
+edition = "2021"
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[dependencies]
+actix-web = "4.5.1"
+chrono = "0.4.35"
+deadpool-postgres = { version = "0.12.1", features = ["serde"] }
+derive_more = "0.99.17"
+env_logger = "0.11.3"
+serde = { version = "1.0.197", features = ["derive"] }
+tokio-pg-mapper = "0.2.0"
+tokio-pg-mapper-derive = "0.2.0"
+tokio-postgres = "0.7.10"

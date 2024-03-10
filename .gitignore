@@ -1,0 +1,4 @@
+/target
+/.vscode
+.env
+gatling_ws/results
