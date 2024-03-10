@@ -30,14 +30,6 @@ impl Cliente {
         
         Ok(())
     }
-
-    pub fn get_balance(&self) -> Saldo {
-        Saldo {
-            total: self.saldo,
-            data_extrato: get_utc(),
-            limite: self.limite
-        }
-    }
 }
 
 
@@ -49,12 +41,14 @@ pub struct Transacao {
     pub valor: i32,
     pub tipo: String,
     pub descricao: String,
+    #[serde(skip_deserializing)]
+    pub saldo_rmsc: i32,
     #[serde(default = "get_utc", skip_deserializing)]
     pub realizada_em: String
 }
 
 impl Transacao {
-    pub fn validate_transaction(&self)-> Result<(), MyError> {
+    pub fn validate_fields(&self)-> Result<(), MyError> {
         // valor deve ser um número inteiro positivo que representa centavos (não vamos trabalhar com frações de centavos). Por exemplo, R$ 10 são 1000 centavos
         if self.valor < 1 {
             return Err(MyError::Unprocessable);
@@ -97,7 +91,12 @@ pub struct Extrato {
 impl Extrato {
     pub fn build_history(cliente_info: Cliente, transacoes_vec: Vec<Transacao,>) -> Extrato {
         Extrato {
-            saldo: cliente_info.get_balance(),
+            saldo: Saldo {
+                //GAMBIARRA PARA QUANDO O CLIENTE NÃO TEM TRANSACAO
+                total: if transacoes_vec.len() > 0 {transacoes_vec[0].saldo_rmsc} else {0},
+                data_extrato: get_utc(),
+                limite: cliente_info.limite
+            },
             ultimas_transacoes: transacoes_vec
         }
     }

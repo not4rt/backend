@@ -6,12 +6,12 @@ use tokio_pg_mapper::FromTokioPostgresRow;
 use crate::models::*;
 use crate::errors::*;
 
-// pub async fn init_db(db_client: &Client) -> Result<(), MyError> {
-//     let stmt:&str = include_str!("../sql/init.sql");
-//     let _ = db_client.batch_execute(stmt).await?;
+pub async fn init_db(db_client: &Client) -> Result<(), MyError> {
+    let stmt:&str = include_str!("../init.sql");
+    let _ = db_client.batch_execute(stmt).await?;
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 pub async fn get_transacoes(db_client: &Client, cliente_id: i32) -> Result<Vec<Transacao,>, MyError> {
     let stmt = include_str!("../sql/get_transacoes.sql");

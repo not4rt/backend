@@ -11,6 +11,7 @@ RUN mkdir src; touch src/main.rs
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src/
 COPY sql ./sql/
+COPY init.sql ./
 
 RUN cargo build --release
 

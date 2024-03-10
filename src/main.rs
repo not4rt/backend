@@ -10,12 +10,12 @@ mod handlers;
 mod db;
 mod errors;
 
-pub type RedBalance = Arc<RwLock<HashMap<i32, bool>>>;
+pub type RedBalance = Arc<RwLock<HashMap<i32, i32>>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // std::env::set_var("RUST_LOG", "info");
-    // env_logger::init_from_env(Env::default().default_filter_or("info"));
+    //env_logger::init_from_env(Env::default().default_filter_or("info"));
     // std::env::set_var("SERVER_ADDR", "127.0.0.1:9999");
     // std::env::set_var("DB_HOST", "127.0.0.1");
     // std::env::set_var("DB_NAME", "testing_db");
@@ -34,9 +34,11 @@ async fn main() -> std::io::Result<()> {
     cfg.pool = deadpool_postgres::PoolConfig::new(50).into();
 
     let pool = cfg.create_pool(None, NoTls).unwrap();
+    // Cache for existing user and his limit is cached    
     let cache_cliente_debit: RedBalance = Arc::new(RwLock::new(HashMap::new()));
-    //let db_client = pool.get().await.expect("Failed to connect to Postgres");
-    //db::init_db(&db_client).await.unwrap();
+    // Reinit database just to test the connection
+    let db_client = pool.get().await.expect("Failed to connect to Postgres");
+    db::init_db(&db_client).await.unwrap();
 
     let server = HttpServer::new(move || {
         App::new()
