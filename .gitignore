@@ -2,3 +2,4 @@
 /.vscode
 .env
 gatling_ws/results
+load-test
