@@ -21,8 +21,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: '3000MB'
+          cpus: '0.7'
+          memory: '250MB'
     logging:
       driver: "none"
     volumes:
@@ -48,8 +48,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: '750MB'
+          cpus: '0.3'
+          memory: '75MB'
     logging:
       driver: "none"
     ports:
@@ -84,8 +84,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: '1000MB'
+          cpus: '0.2'
+          memory: '150MB'
     logging:
       driver: "none"
     ports:

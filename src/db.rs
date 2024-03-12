@@ -35,7 +35,7 @@ pub async fn get_transacoes(db_client: &Client, cliente_id: i32) -> Result<Vec<T
 // pub async fn add_transacao(db_client: &Client, cliente_id:i32, transacao_info: &Transacao) -> Result<Transacao, MyError> {
 //     let _stmt = include_str!("../sql/add_transacao.sql");
 //     let _stmt = _stmt.replace("$table_fields", &Transacao::sql_table_fields());
-//     let stmt = db_client.prepare(&_stmt).await.unwrap();
+//     let stmt = db_client.prepare_cached(&_stmt).await.unwrap();
 
 //     db_client
 //         .query(
@@ -92,29 +92,46 @@ pub async fn make_transaction(db_client: &Client, cliente_id:i32, transacao_info
     return Ok(cliente)
 }
 
-pub async fn get_cliente(db_client: &Client, cliente_id: i32) -> Result<Cliente, MyError> {
-    let stmt = include_str!("../sql/get_cliente.sql");
+// pub async fn get_cliente(db_client: &Client, cliente_id: i32) -> Result<Cliente, MyError> {
+//     let stmt = include_str!("../sql/get_cliente.sql");
+//     let stmt = stmt.replace("$table_fields", &Cliente::sql_fields());
+//     let stmt = db_client.prepare(&stmt).await.unwrap();
+
+//     let result = db_client
+//         .query(
+//             &stmt, 
+//             &[
+//                 &cliente_id
+//             ])
+//         .await?
+//         .iter()
+//         .map(|row| Cliente::from_row_ref(row).unwrap())
+//         .collect::<Vec<Cliente>>()
+//         .pop()
+//         .ok_or(MyError::NotFound);
+//     result
+// }
+
+pub async fn get_all_clientes(db_client: &Client) -> Result<Vec<Cliente>, MyError> {
+    let stmt = include_str!("../sql/get_all_clientes.sql");
     let stmt = stmt.replace("$table_fields", &Cliente::sql_fields());
     let stmt = db_client.prepare(&stmt).await.unwrap();
 
-    let result = db_client
+    let results = db_client
         .query(
             &stmt, 
-            &[
-                &cliente_id
-            ])
+            &[]
+        )
         .await?
         .iter()
         .map(|row| Cliente::from_row_ref(row).unwrap())
-        .collect::<Vec<Cliente>>()
-        .pop()
-        .ok_or(MyError::NotFound);
-    result
+        .collect::<Vec<Cliente>>();
+    Ok(results)
 }
 
 // pub async fn update_cliente(db_client: &Client, cliente_id: i32, old_balance: i32, new_balance: i32) -> Result<(), MyError> {
 //     let _stmt = include_str!("../sql/update_cliente.sql");
-//     let stmt = db_client.prepare(&_stmt).await.unwrap();
+//     let stmt = db_client.prepare_cached(&_stmt).await.unwrap();
 
 //     db_client
 //         .query(

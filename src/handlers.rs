@@ -20,10 +20,13 @@ pub async fn add_transacao(
     let transacao_info: Transacao = transacao.into_inner();
     transacao_info.validate_fields()?;
 
+    let mut cliente_info = get_cliente_cache(
+        cliente_id, 
+        cache_cliente, 
+        //&db_client
+    ).await?;
+
     let db_client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-
-    let mut cliente_info = get_cliente_cache(cliente_id, cache_cliente, &db_client).await?;
-
     cliente_info
         .make_transaction(&transacao_info, &db_client)
         .await?;
@@ -39,7 +42,11 @@ pub async fn get_extrato(
 ) -> Result<HttpResponse, Error> {
     let db_client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
 
-    let cliente_info: Cliente = get_cliente_cache(cliente_id, cache_cliente, &db_client).await?;
+    let cliente_info: Cliente = get_cliente_cache(
+        cliente_id, 
+        cache_cliente, 
+        //&db_client
+    ).await?;
 
     let transacoes_info: Vec<Transacao> = db::get_transacoes(&db_client, cliente_info.id).await?;
 
@@ -51,7 +58,7 @@ pub async fn get_extrato(
 async fn get_cliente_cache(
     cliente_id: web::Path<i32>,
     cache_cliente: web::Data<RedBalance>,
-    db_client: &Client,
+    //db_client: &Client,
 ) -> Result<Cliente, Error> {
     // check if user and his limit is cached
     let cache_read_lock = cache_cliente.read().unwrap();
@@ -66,13 +73,14 @@ async fn get_cliente_cache(
             }
         }
         None => {
-            //println!("Cliente not found in cache");
-            drop(cache_read_lock);
-            let cliente = db::get_cliente(&db_client, cliente_id.into_inner()).await?;
-            let mut cache_write_lock = cache_cliente.write().unwrap();
-            cache_write_lock.insert(cliente.id, cliente.limite);
-            cliente
-        }
+            println!("Cliente not found in cache");
+            Err(MyError::NotFound)
+            //drop(cache_read_lock);
+            //let cliente = db::get_cliente(&db_client, cliente_id.into_inner()).await?;
+            //let mut cache_write_lock = cache_cliente.write().unwrap();
+            //cache_write_lock.insert(cliente.id, cliente.limite);
+            //cliente
+        }?
     };
 
     Ok(cliente_info)
