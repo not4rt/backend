@@ -1,12 +1,11 @@
-use deadpool_postgres::Client;
 use serde::{Deserialize, Serialize};
-use tokio_pg_mapper_derive::PostgresMapper;
 use chrono::Utc;
+use sqlx::{Acquire, PgConnection, PgPool};
 
 use crate::{db, errors::MyError};
 
-#[derive(Clone, Copy, Deserialize, PostgresMapper, Serialize, Default)]
-#[pg_mapper(table = "clientes")]
+#[derive(Clone, Copy, Deserialize, Serialize, Default)]
+#[derive(sqlx::FromRow)]
 pub struct Cliente {
     #[serde(skip_serializing, skip_deserializing, default)]
     pub id: i32,
@@ -17,24 +16,36 @@ pub struct Cliente {
 }
 
 impl Cliente {
-    pub async fn make_transaction(&mut self, transacao: &Transacao, db_client: &Client) -> Result<(), MyError> {
-        match db::make_transaction(&db_client, self.id, &transacao).await {
-            Ok(cliente) => { 
-                self.saldo = cliente.saldo;
-                self.limite = cliente.limite;
-            },
-            Err(error) => {
-                Err(error)
-            }?
-        };
+    pub async fn get_saldo(&mut self, db_conn: &mut PgConnection) -> Result<(), MyError> {
+        self.saldo = db::get_cliente_saldo(
+            db_conn,
+            self.id)
+            .await?;
         
+        Ok(())
+    }
+    pub async fn make_transaction(&mut self, transacao: &Transacao, db_client: &PgPool) -> Result<(), MyError> {
+        let mut _db_conn = db_client.acquire().await.map_err(MyError::PoolError)?;
+        let db_conn = _db_conn.acquire().await.map_err(MyError::PoolError)?;        
+        
+        self.get_saldo(db_conn).await?;
+        if transacao.tipo == "d" && (self.saldo - transacao.valor) < -self.limite {
+            return Err(MyError::Unprocessable)
+        }
+        self.saldo = db::make_transaction(
+            db_conn,
+            self.id, 
+            transacao)
+            .await?;
+        
+        //println!("id={} saldo={} trans_tipo={} trans_valor={} limite={}", self.id, self.saldo, transacao.tipo, transacao.valor, self.limite);
         Ok(())
     }
 }
 
 
-#[derive(Deserialize, PostgresMapper, Serialize)]
-#[pg_mapper(table = "transacoes")]
+#[derive(Deserialize, Serialize)]
+#[derive(sqlx::FromRow)]
 pub struct Transacao {
     #[serde(skip_serializing, skip_deserializing)]
     pub id: i32,
@@ -58,7 +69,8 @@ impl Transacao {
             return Err(MyError::Unprocessable);
         };
         // descricao deve ser uma string de 1 a 10 caracteres
-        if self.descricao.len() < 1 || self.descricao.len() > 10 {
+        let desc_len = self.descricao.len();
+        if !(1..=10).contains(&desc_len) {
             return Err(MyError::Unprocessable);
         }
         // Uma transação de débito nunca pode deixar o saldo do cliente menor que seu limite disponível
@@ -89,13 +101,13 @@ pub struct Extrato {
 }
 
 impl Extrato {
-    pub fn build_history(cliente_info: Cliente, transacoes_vec: Vec<Transacao,>) -> Extrato {
+    pub fn build_history(limite: i32, transacoes_vec: Vec<Transacao,>) -> Extrato {
         Extrato {
             saldo: Saldo {
                 //GAMBIARRA PARA QUANDO O CLIENTE NÃO TEM TRANSACAO
-                total: if transacoes_vec.len() > 0 {transacoes_vec[0].saldo_rmsc} else {0},
+                total: if !transacoes_vec.is_empty() {transacoes_vec[0].saldo_rmsc} else {0},
                 data_extrato: get_utc(),
-                limite: cliente_info.limite
+                limite
             },
             ultimas_transacoes: transacoes_vec
         }

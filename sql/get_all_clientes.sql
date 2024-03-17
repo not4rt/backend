@@ -1,2 +1,2 @@
-SELECT $table_fields 
+SELECT id, nome, limite, saldo 
 FROM backend.clientes;

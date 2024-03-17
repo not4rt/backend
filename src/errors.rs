@@ -1,15 +1,11 @@
 use actix_web::{HttpResponse, ResponseError};
-use deadpool_postgres::PoolError;
 use derive_more::{Display, From};
-use tokio_pg_mapper::Error as PGMError;
-use tokio_postgres::error::Error as PGError;
+use sqlx::Error as PoolError;
 
 #[derive(Display, From, Debug)]
 pub enum MyError {
     NotFound,
     Unprocessable,
-    PGError(PGError),
-    PGMError(PGMError),
     PoolError(PoolError),
 }
 impl std::error::Error for MyError {}
@@ -22,7 +18,7 @@ impl ResponseError for MyError {
             MyError::PoolError(ref err) => {
                 HttpResponse::InternalServerError().body(err.to_string())
             }
-            _ => HttpResponse::InternalServerError().finish(),
+            //_ => HttpResponse::InternalServerError().finish(),
         }
     }
 }
