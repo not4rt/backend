@@ -37,10 +37,10 @@ VALUES
 CREATE PROCEDURE INSERIR_TRANSACAO_D(
 	p_id_cliente INTEGER,
 	p_valor INTEGER,
+	p_valormenoslimite INTEGER,
 	p_descricao VARCHAR(10),
 	p_realizada_em VARCHAR(200),
-	INOUT pout_saldo INTEGER DEFAULT NULL,
-	INOUT pout_limite INTEGER DEFAULT NULL
+	INOUT pout_saldo INTEGER DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -49,16 +49,16 @@ BEGIN
 	UPDATE_CLIENTES AS (
 		UPDATE backend.clientes
 		SET saldo = saldo - p_valor
-		WHERE id = p_id_cliente AND saldo - p_valor >= -limite
-		RETURNING saldo, limite
+		WHERE id = p_id_cliente AND saldo >= p_valormenoslimite
+		RETURNING saldo
 	),
 	INSERT_TRANSACAO AS (
 		INSERT INTO backend.transacoes (cliente_id, valor, tipo, descricao, saldo_rmsc, realizada_em)
 		SELECT p_id_cliente, p_valor, 'd', p_descricao, saldo, p_realizada_em
 		from UPDATE_CLIENTES
 	)
-	SELECT saldo, limite
-	INTO pout_saldo, pout_limite
+	SELECT saldo
+	INTO pout_saldo
 	FROM UPDATE_CLIENTES;
 END;
 $$;
@@ -68,8 +68,7 @@ CREATE PROCEDURE INSERIR_TRANSACAO_C(
 	p_valor INTEGER,
 	p_descricao VARCHAR(10),
 	p_realizada_em VARCHAR(200),
-	INOUT pout_saldo INTEGER DEFAULT NULL,
-	INOUT pout_limite INTEGER DEFAULT NULL
+	INOUT pout_saldo INTEGER DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
@@ -79,7 +78,7 @@ BEGIN
 		UPDATE backend.clientes
 		SET saldo = saldo + p_valor
 		WHERE id = p_id_cliente
-		RETURNING saldo, limite
+		RETURNING saldo
 	),
 	INSERT_TRANSACAO AS (
 		INSERT INTO backend.transacoes (cliente_id, valor, tipo, descricao, saldo_rmsc, realizada_em)
@@ -87,8 +86,8 @@ BEGIN
 		from UPDATE_CLIENTES
 	)
 	
-	SELECT saldo, limite
-	INTO pout_saldo, pout_limite
+	SELECT saldo
+	INTO pout_saldo
 	FROM UPDATE_CLIENTES;
 END;
 $$;

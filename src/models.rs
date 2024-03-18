@@ -18,16 +18,14 @@ pub struct Cliente {
 
 impl Cliente {
     pub async fn make_transaction(&mut self, transacao: &Transacao, db_client: &Client) -> Result<(), MyError> {
-        match db::make_transaction(&db_client, self.id, &transacao).await {
-            Ok(cliente) => { 
-                self.saldo = cliente.saldo;
-                self.limite = cliente.limite;
-            },
-            Err(error) => {
-                Err(error)
-            }?
-        };
-        
+        if transacao.tipo == "d" {
+            let valor_limite = transacao.valor - self.limite;
+            self.saldo = db::make_transaction_d(db_client, self.id, valor_limite, transacao).await?;
+        }
+        else {
+            self.saldo = db::make_transaction_c(db_client, self.id, transacao).await?;
+        }
+
         Ok(())
     }
 }
@@ -93,7 +91,7 @@ impl Extrato {
         Extrato {
             saldo: Saldo {
                 //GAMBIARRA PARA QUANDO O CLIENTE NÃO TEM TRANSACAO
-                total: if transacoes_vec.len() > 0 {transacoes_vec[0].saldo_rmsc} else {0},
+                total: if !transacoes_vec.is_empty() {transacoes_vec[0].saldo_rmsc} else {0},
                 data_extrato: get_utc(),
                 limite: cliente_info.limite
             },

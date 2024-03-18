@@ -56,40 +56,52 @@ pub async fn get_transacoes(db_client: &Client, cliente_id: i32) -> Result<Vec<T
 //         .ok_or(MyError::NotFound) // more applicable for SELECTs
 // }
 
-pub async fn make_transaction(db_client: &Client, cliente_id:i32, transacao_info: &Transacao) -> Result<Cliente, MyError> {
-    let mut _stmt = include_str!("../sql/make_transaction_c.sql");
-    if transacao_info.tipo == "d" {
-        _stmt = include_str!("../sql/make_transaction_d.sql");
-    }
+pub async fn make_transaction_d(db_client: &Client, cliente_id:i32, valor_limite:i32, transacao_info: &Transacao) -> Result<i32, MyError> {
+    let _stmt = include_str!("../sql/make_transaction_d.sql");
     let stmt = db_client.prepare(&_stmt).await.unwrap();
-
     let result = db_client
-        .query(
-            &stmt,
-            &[
-                &cliente_id,
-                &transacao_info.valor,
-                &transacao_info.descricao,
-                &transacao_info.realizada_em,
-            ],
-        )
-        .await?
-        .pop()
-        .ok_or(MyError::Unprocessable)?; // more applicable for SELECTs
+    .query(
+        &stmt,
+        &[
+            &cliente_id,
+            &transacao_info.valor,
+            &valor_limite,
+            &transacao_info.descricao,
+            &transacao_info.realizada_em,
+        ],
+    )
+    .await?
+    .pop()
+    .ok_or(MyError::Unprocessable)?;
     
     let saldo: Option<i32> = result.get(0);
-    let limite: Option<i32> = result.get(1);
-    if saldo.is_none() || limite.is_none() {
+    if saldo.is_none() {
         return Err(MyError::Unprocessable)
     }
 
-    let cliente = Cliente {
-        saldo: saldo.unwrap(),
-        limite: limite.unwrap(),
-        ..Default::default()
-    };
+    return Ok(saldo.unwrap())
+}
 
-    return Ok(cliente)
+pub async fn make_transaction_c(db_client: &Client, cliente_id:i32, transacao_info: &Transacao) -> Result<i32, MyError> {
+    let _stmt = include_str!("../sql/make_transaction_c.sql");
+    let stmt = db_client.prepare(&_stmt).await.unwrap();
+    let result = db_client
+    .query(
+        &stmt,
+        &[
+            &cliente_id,
+            &transacao_info.valor,
+            &transacao_info.descricao,
+            &transacao_info.realizada_em,
+        ],
+    )
+    .await?
+    .pop()
+    .ok_or(MyError::Unprocessable)?;
+    
+    let saldo: i32 = result.get(0);
+
+    return Ok(saldo)
 }
 
 // pub async fn get_cliente(db_client: &Client, cliente_id: i32) -> Result<Cliente, MyError> {

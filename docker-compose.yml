@@ -30,7 +30,8 @@ services:
 
   backend01: &backend
     network_mode: host
-    image: not4rt/backend:latest
+    build:
+      dockerfile: Dockerfile
     hostname: backend01
     environment: &backendenv
       SERVER_ADDR: "0.0.0.0:8080"

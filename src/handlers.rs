@@ -21,7 +21,7 @@ pub async fn add_transacao(
     transacao_info.validate_fields()?;
 
     let mut cliente_info = get_cliente_cache(
-        cliente_id, 
+        cliente_id.into_inner(), 
         cache_cliente, 
         //&db_client
     ).await?;
@@ -43,7 +43,7 @@ pub async fn get_extrato(
     let db_client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
 
     let cliente_info: Cliente = get_cliente_cache(
-        cliente_id, 
+        cliente_id.into_inner(), 
         cache_cliente, 
         //&db_client
     ).await?;
@@ -56,24 +56,23 @@ pub async fn get_extrato(
 }
 
 async fn get_cliente_cache(
-    cliente_id: web::Path<i32>,
+    cliente_id: i32,
     cache_cliente: web::Data<RedBalance>,
     //db_client: &Client,
 ) -> Result<Cliente, Error> {
     // check if user and his limit is cached
-    let cache_read_lock = cache_cliente.read().unwrap();
-    let cliente_cached = cache_read_lock.get(&cliente_id);
+    let cliente_cached = cache_cliente.get(&cliente_id);
     let cliente_info: Cliente = match cliente_cached {
         Some(limite) => {
             //println!("Cliente found in cache");
             Cliente {
-                id: cliente_id.into_inner(),
+                id: cliente_id,
                 limite: limite.clone(),
-                ..Default::default()
+                saldo: 0 
             }
         }
         None => {
-            println!("Cliente not found in cache");
+            println!("Cliente {cliente_id} not found in cache");
             Err(MyError::NotFound)
             //drop(cache_read_lock);
             //let cliente = db::get_cliente(&db_client, cliente_id.into_inner()).await?;

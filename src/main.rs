@@ -1,7 +1,7 @@
 use actix_web::{web, App, HttpServer};
 use deadpool_postgres::Config;
 use tokio_postgres::NoTls;
-use std::{collections::HashMap, sync::{Arc, RwLock}};
+use std::{collections::HashMap, sync::Arc};
 // use actix_web::middleware::Logger;
 //use env_logger::Env;
 
@@ -10,7 +10,7 @@ mod handlers;
 mod db;
 mod errors;
 
-pub type RedBalance = Arc<RwLock<HashMap<i32, i32>>>;
+pub type RedBalance = Arc<HashMap<i32, i32>>;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -31,24 +31,24 @@ async fn main() -> std::io::Result<()> {
     cfg.dbname = Some(std::env::var("DB_NAME").expect("DB_NAME must be set"));
     cfg.user = Some(std::env::var("DB_USER").expect("DB_USER must be set"));
     cfg.password = Some(std::env::var("DB_PASS").expect("DB_PASS must be set"));
-    cfg.pool = deadpool_postgres::PoolConfig::new(50).into();
+    cfg.pool = deadpool_postgres::PoolConfig::new(170).into();
 
     let pool = cfg.create_pool(None, NoTls).unwrap();
     // Cache for existing user and his limit is cached    
-    let cache_cliente: RedBalance = Arc::new(RwLock::new(HashMap::new()));
+    let mut cache_hashmap = HashMap::new();
     // Reinit database just to test the connection
     let db_client = pool.get().await.expect(format!("Failed to connect to Postgres on {}:{}", cfg.host.unwrap(), cfg.port.unwrap()).as_str());
     db::init_db(&db_client).await.unwrap();
     // Populate Cache
     let clientes = db::get_all_clientes(&db_client).await.expect("Invalid database. Could not retrive 'clientes'!");
+    drop(db_client);
     if clientes.len() > 0 {
-        let mut cache_write = cache_cliente.write().unwrap();
         clientes
         .iter()
-        .for_each(|cliente| { cache_write.insert(cliente.id, cliente.limite);});
+        .for_each(|cliente| { cache_hashmap.insert(cliente.id, cliente.limite);});
     }
-    drop(db_client);
 
+    let cache_cliente: RedBalance = Arc::new(cache_hashmap);
     let server = HttpServer::new(move || {
         App::new()
         .app_data(web::Data::new(pool.clone()))
