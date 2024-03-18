@@ -1,12 +1,13 @@
 use actix_web::{HttpResponse, ResponseError};
 use derive_more::{Display, From};
-use sqlx::Error as PoolError;
+use diesel::result::Error::{self as DbError, NotFound};
 
 #[derive(Display, From, Debug)]
 pub enum MyError {
     NotFound,
     Unprocessable,
-    PoolError(PoolError),
+    DbError(DbError)
+    //PoolError(PoolError),
 }
 impl std::error::Error for MyError {}
 
@@ -15,9 +16,15 @@ impl ResponseError for MyError {
         match *self {
             MyError::NotFound => HttpResponse::NotFound().finish(),
             MyError::Unprocessable => HttpResponse::UnprocessableEntity().finish(),
-            MyError::PoolError(ref err) => {
+            MyError::DbError(ref err) => {
+                if err == &NotFound {
+                    return HttpResponse::UnprocessableEntity().finish()
+                }
                 HttpResponse::InternalServerError().body(err.to_string())
-            }
+            },
+            // MyError::PoolError(ref err) => {
+            //     HttpResponse::InternalServerError().body(err.to_string())
+            // }
             //_ => HttpResponse::InternalServerError().finish(),
         }
     }

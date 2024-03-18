@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: rinha
     healthcheck:
       test: "pg_isready -p 5432"
-      interval: 3s
+      interval: 15s
     restart: always
     ulimits:
       nofile:
@@ -23,8 +23,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.4'
-          memory: '175MB'
+          cpus: '1'
+          memory: '300MB'
     logging:
       driver: "none"
     volumes:

@@ -1,9 +1,8 @@
 use actix_web::{get, post, web, Error, HttpResponse, Responder};
-use sqlx::{Acquire, PgPool};
 
 use crate::errors::MyError;
-use crate::models::*;
-use crate::{db, RedBalance};
+use crate::{models::*, DbPoll};
+use crate::RedBalance;
 
 #[get("/")]
 pub async fn hello() -> impl Responder {
@@ -14,7 +13,7 @@ pub async fn hello() -> impl Responder {
 pub async fn add_transacao(
     cliente_id: web::Path<i32>,
     transacao: web::Json<Transacao>,
-    db_pool: web::Data<PgPool>,
+    db_pool: web::Data<DbPoll>,
     cache_cliente: web::Data<RedBalance>,
 ) -> Result<HttpResponse, Error> {
     let transacao_info: Transacao = transacao.into_inner();
@@ -42,8 +41,7 @@ pub async fn add_transacao(
 
     let db_client = db_pool.into_inner();
     cliente_info
-        .make_transaction(&transacao_info, &db_client)
-        .await?;
+        .make_transaction(&transacao_info, &mut db_client.get().await.unwrap()).await?;
 
     Ok(HttpResponse::Ok().json(cliente_info))
 }
@@ -51,11 +49,11 @@ pub async fn add_transacao(
 #[get("/clientes/{id}/extrato")]
 pub async fn get_extrato(
     cliente_id: web::Path<i32>,
-    db_pool: web::Data<PgPool>,
+    db_pool: web::Data<DbPoll>,
     cache_cliente: web::Data<RedBalance>,
 ) -> Result<HttpResponse, Error> {
 
-    let cliente_info: Cliente = get_cliente_cache(
+    let mut cliente_info: Cliente = get_cliente_cache(
         cliente_id.into_inner(), 
         cache_cliente, 
         //&db_client
@@ -75,11 +73,10 @@ pub async fn get_extrato(
     // let db_client: Client = db_client_result.map_err(MyError::PoolError)?;
     
     let db_client = db_pool.into_inner();
-    let mut _db_conn = db_client.acquire().await.map_err(MyError::PoolError)?;
-    let db_conn = _db_conn.acquire().await.map_err(MyError::PoolError)?;
-    let transacoes_info: Vec<Transacao> = db::get_transacoes(db_conn, cliente_info.id).await?;
+    let db_conn = &mut db_client.get().await.unwrap();
+    let transacoes_info: Vec<Transacao> = cliente_info.get_last_transactions(db_conn).await?;
 
-    let extrato_info: Extrato = Extrato::build_history(cliente_info.limite, transacoes_info);
+    let extrato_info: Extrato = Extrato::build_history(cliente_info, transacoes_info, db_conn).await;
 
     Ok(HttpResponse::Ok().json(extrato_info))
 }

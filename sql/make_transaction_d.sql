@@ -1,1 +1,0 @@
-call INSERIR_TRANSACAO_D($1, $2, $3, $4);
